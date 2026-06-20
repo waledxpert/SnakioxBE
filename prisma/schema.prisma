@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(cuid())
+  walletAddress String        @unique
+  registeredAt DateTime      @default(now())
+  hasMinted     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  sessions      GameSession[]
+  mintRecords   MintRecord[]
+}
+
+model GameSession {
+  id              String        @id @default(cuid())
+  walletAddress   String
+  status          String        @default("ACTIVE")
+  startedAt       DateTime      @default(now())
+  endedAt         DateTime?
+  score           Int?
+  snakeLength     Int?
+  finalSnakeCells String?
+  moves           String?
+  deathReason     String?
+  replayGifUrl    String?
+  mintPayloadHash String?
+  mintSignature   String?
+  mintedTokenId   String?
+  txHash          String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  user            User          @relation(fields: [walletAddress], references: [walletAddress])
+  mintRecord      MintRecord?
+
+  @@index([walletAddress])
+  @@index([status])
+}
+
+model MintRecord {
+  id            String      @id @default(cuid())
+  walletAddress String
+  tokenId       String
+  sessionId     String      @unique
+  txHash        String      @unique
+  mintedAt      DateTime    @default(now())
+  user          User        @relation(fields: [walletAddress], references: [walletAddress])
+  session       GameSession @relation(fields: [sessionId], references: [id])
+
+  @@index([walletAddress])
+}
