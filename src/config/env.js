@@ -37,12 +37,14 @@ export const env = {
   mintContractAddress:
     process.env.MINT_CONTRACT_ADDRESS ||
     "0x0000000000000000000000000000000000000000",
-  chainId: BigInt(process.env.CHAIN_ID || "31337"),
+  // Signed into the mint payload — MUST match the chain the contract is deployed
+  // on (1 = Ethereum mainnet), or signatures won't verify.
+  chainId: BigInt(process.env.CHAIN_ID || "1"),
   // RPC used only to read the current block number when committing the
   // reveal block for a mint signature. Required for on-chain minting.
   rpcUrl: process.env.RPC_URL || "",
   // Smallest grind-proof buffer: the reveal block just needs to be unmined when
-  // signed. 1 block (~12s on Sepolia) keeps random->mint snappy. Bump to 2+ if
+  // signed. 1 block (~12s on Ethereum) keeps random->mint snappy. Bump to 2+ if
   // reorg safety on the reveal block matters more than latency.
   revealBufferBlocks: Number(process.env.REVEAL_BUFFER_BLOCKS || 1),
   adminWalletAddress: process.env.ADMIN_WALLET_ADDRESS || "",
