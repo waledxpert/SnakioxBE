@@ -181,6 +181,12 @@ function buildFailOpenRedisStore(prefix) {
   const store = new RedisStore({ sendCommand: (...args) => redis.sendCommand(args), prefix });
 
   return {
+    // Forward the inner store's identity so express-rate-limit's double-count
+    // guard can tell each limiter apart. Without these, every wrapper looks like
+    // the same prefix-less "Object" store and stacking global + a route limiter
+    // trips ERR_ERL_DOUBLE_COUNT for the shared client IP.
+    prefix: store.prefix,
+    localKeys: store.localKeys,
     init: (options) => store.init?.(options),
     async increment(key) {
       try {
