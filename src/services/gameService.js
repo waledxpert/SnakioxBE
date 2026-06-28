@@ -419,7 +419,15 @@ function validateGameResult({
     throw badRequest("Game duration is too long");
   }
 
-  if (moves.length / Math.max(durationSeconds, 1) > 1 / env.minSecondsPerMove) {
+  // Count only real turns. Consecutive same-direction inputs (key auto-repeat
+  // while a key is held, or a trackpad/d-pad firing continuously) aren't separate
+  // actions, so they must not inflate the rate or trip the burst check below.
+  const turnCount = moves.reduce(
+    (count, move, index) =>
+      index === 0 || move.direction !== moves[index - 1].direction ? count + 1 : count,
+    0,
+  );
+  if (turnCount / Math.max(durationSeconds, 1) > 1 / env.minSecondsPerMove) {
     throwBotDetected();
   }
 
@@ -440,6 +448,7 @@ function validateGameResult({
 
   let previousTick = -1;
   let previousAtMs = -1;
+  let previousDirection = null;
   let impossibleBurstCount = 0;
 
   for (const move of moves) {
@@ -449,15 +458,20 @@ function validateGameResult({
       );
     }
 
+    // Only real turns count toward "impossible" bursts; same-direction repeats
+    // are input noise, not separate actions.
+    const isTurn = move.direction !== previousDirection;
+
     if (typeof move.tick === "number") {
       if (move.tick < previousTick) throwBotDetected();
-      if (move.tick === previousTick) impossibleBurstCount += 1;
+      if (isTurn && move.tick === previousTick) impossibleBurstCount += 1;
       previousTick = move.tick;
     }
 
     if (typeof move.atMs === "number") {
       if (move.atMs < previousAtMs) throwBotDetected();
       if (
+        isTurn &&
         previousAtMs >= 0 &&
         move.atMs - previousAtMs < env.minSecondsPerMove * 1000
       ) {
@@ -466,6 +480,7 @@ function validateGameResult({
       previousAtMs = move.atMs;
     }
 
+    previousDirection = move.direction;
     if (impossibleBurstCount > 12) throwBotDetected();
   }
 
